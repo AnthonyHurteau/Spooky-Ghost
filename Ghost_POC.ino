@@ -1,16 +1,24 @@
 int led[] = {
-  11, 10, 9, 6
+  3, 5, 6, 9, 10, 11
 };
-int ledCount = 4;
+int ledCount = 6;
+
+int ledFace = 2;
 
 int pot = A0;
-int potval = 0;
+int potVal = 0;
 
-int potRange1 = 0;
-int potRange2 = 255;
-int potRange3 = 511;
-int potRange4 = 766;
-int potRange5 = 1023;
+int potRange0 = 0;
+int potRange1 = 204;
+int potRange2 = 408;
+int potRange3 = 612;
+int potRange4 = 816;
+int potRange5 = 1015;
+
+unsigned long previousMillis = 0;
+const long timer1 = 250;
+const long faderTimer1 = 5;
+int ledState = LOW;
 
 int timer = 250;
 int faderTimer = 5;
@@ -20,26 +28,38 @@ void setup() {
   for (int thisLed = 0; thisLed < ledCount; thisLed++) {
     pinMode(led[thisLed], OUTPUT);
   }
+  pinMode(ledFace, OUTPUT);
+  // Serial.begin(9600);
 }
 
 void loop() {
 
-  potval = analogRead(pot);
+  unsigned long currentMillis = millis();
+  potVal = analogRead(pot);
+  //Serial.println(potVal);
+  // delay(1);
 
-  //#1 - All led chains OFF
-  if (potval == potRange1) {
+  //#1 - Face leds behavior
+  if (potVal == potRange0) {
+    digitalWrite(ledFace, LOW);
+  } else {
+    digitalWrite(ledFace, HIGH);
+  }
+
+  //#2 - All led chains OFF
+  if (potVal > potRange0 && potVal < potRange1) {
     for (int thisLed = 0; thisLed < ledCount; thisLed++) {
       digitalWrite(led[thisLed], LOW);
     }
   }
 
-  //#2 All led chains ON
-  if (potval > potRange1 && potval < potRange2) {
+  //#3 All led chains ON
+  if (potVal > potRange1 && potVal < potRange2) {
 
     for (int thisLed = 0; thisLed < ledCount; thisLed++) {
       digitalWrite(led[thisLed], HIGH);
-      potval = analogRead(pot);
-      if (potval == potRange1 || potval >= potRange2) {
+      potVal = analogRead(pot);
+      if (potVal == potRange1 || potVal >= potRange2) {
         for (int thisLed = 0; thisLed < ledCount; thisLed++) {
           digitalWrite(led[thisLed], LOW);
         }
@@ -47,28 +67,51 @@ void loop() {
     }
   }
 
-  //#3 All led chains blink at the same time
-  if (potval >= potRange2 && potval < potRange3) {
+  //#4 All led chains blink at the same time
+  if (potVal >= potRange2 && potVal < potRange3) {
 
     for (int thisLed = 0; thisLed < ledCount; thisLed++) {
-      digitalWrite(led[thisLed], HIGH);
+      digitalWrite(led[thisLed], ledState);
+
+      if (currentMillis - previousMillis >= timer1) {
+        previousMillis = currentMillis;
+
+        if (ledState == LOW) {
+          ledState = HIGH;
+        } else {
+          ledState = LOW;
+        }
+      }
     }
-
-    delay(timer);
-
-    for (int thisLed = 0; thisLed < ledCount; thisLed++) {
-      digitalWrite(led[thisLed], LOW);
-    }
-
-    delay(timer);
   }
 
-  //#4 Blink one led chain at a time
-  if (potval >= potRange3 && potval < potRange4) {
+  //#5 Blink one led chain at a time
+  /*  if (potVal >= potRange3 && potVal < potRange4) {
+
+      for (int thisLed = 0; thisLed < ledCount; thisLed++) {
+
+        int currentLed = thisLed;
+
+        digitalWrite(led[currentLed], ledState);
+
+        if (currentMillis - previousMillis >= timer1) {
+          previousMillis = currentMillis;
+
+          if (ledState == LOW) {
+            ledState = HIGH;
+          }
+        } else {
+          ledState = LOW;
+        }
+      }
+    }
+  */
+  //#5 Blink one led chain at a time
+  if (potVal >= potRange3 && potVal < potRange4) {
 
     for (int thisLed = 0; thisLed < ledCount; thisLed++) {
-      potval = analogRead(pot);
-      if (potval < potRange3 || potval >= potRange4) {
+      potVal = analogRead(pot);
+      if (potVal < potRange3 || potVal >= potRange4) {
         break;
       }
       digitalWrite(led[thisLed], HIGH);
@@ -78,23 +121,34 @@ void loop() {
     }
   }
 
-  //#5 Open random led chain and close random led chain
-  if (potval >= potRange4 && potval < potRange5) {
+  //#6 Open random led chain and close random led chain
+  if (potVal >= potRange4 && potVal < potRange5) {
+    potVal = analogRead(pot);
+    if (potVal < potRange4 || potVal >= potRange5) {
+      for (int thisLed = 0; thisLed < ledCount; thisLed++) {
+        digitalWrite(led[thisLed], LOW);
+      }
+    }
     int randNumber = random(ledCount);
     digitalWrite(led[randNumber], HIGH);
     delay(timer);
+    if (potVal < potRange4 || potVal >= potRange5) {
+      for (int thisLed = 0; thisLed < ledCount; thisLed++) {
+        digitalWrite(led[thisLed], LOW);
+      }
+    }
     randNumber = random(ledCount);
     digitalWrite(led[randNumber], LOW);
     delay(timer);
   }
 
-  //#6 Fade in and open one led chain at a time into fade out and close
+  //#7 Fade in and open one led chain at a time into fade out and close
   //   one led chain at a time from first led chain to the last
-  if (potval == potRange5) {
+  if (potVal >= potRange5) {
 
     for (int thisLed = 0; thisLed < ledCount; thisLed++) {
-      potval = analogRead(pot);
-      if (potval != potRange5) {
+      potVal = analogRead(pot);
+      if (potVal < potRange5) {
         break;
       }
       for (int i = 0; i <= 255; i++) {
@@ -109,8 +163,8 @@ void loop() {
     }
 
     for (int thisLed = 0; thisLed < ledCount; thisLed++) {
-      potval = analogRead(pot);
-      if (potval != potRange5) {
+      potVal = analogRead(pot);
+      if (potVal < potRange5) {
         break;
       }
       for (int i = 255; i >= 0; i--) {
